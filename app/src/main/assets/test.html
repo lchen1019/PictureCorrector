@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>H5CA</title>
+    <meta charset="utf-8">
+</head>
+
+<body>
+<script>
+        function takePhoto() {
+            let vid1 = new Image();
+            vid1.src = "http://images.cnblogs.com/cnblogs_com/html5test/359114/r_test.jpg";
+            let can1 = document.getElementById("canvas1");
+            let ctx = can1.getContext('2d');
+            ctx.drawImage(vid1, 0, 0, 320, 480);
+        }
+</script>
+    <video id="video1" width="320px" height="480px" autoplay="autoplay"></video>
+    <canvas id="canvas1" width="320px" height="480px"></canvas>
+</body>
+</html>

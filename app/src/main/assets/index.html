@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>H5CA</title>
+        <meta charset="utf-8">
+    </head>
+<body>
+<script>
+function live() {
+            let constraints = {
+                video: {width: 320, height: 480},
+                audio: true
+            };
+            //获得video摄像头区域
+            let video1 = document.getElementById("video1");
+            let promise = navigator.mediaDevices.getUserMedia(constraints);
+            promise.then(function (MediaStream) {
+                video1.srcObject = MediaStream;
+                video1.play();
+            });
+        }
+ 
+function takePhoto() {
+      // let vid1 = document.getElementById("video1");
+      let vid1 = new Image();
+      vid1.src = "http://images.cnblogs.com/cnblogs_com/html5test/359114/r_test.jpg";
+      let can1 = document.getElementById("canvas1");
+      let ctx = can1.getContext('2d');
+      ctx.drawImage(vid1, 0, 0, 320, 480);
+      }
+function tixing() {
+    let can1 = document.getElementById("canvas1");
+    var ct=can1.getContext("2d");
+    ct.beginPath();
+    ct.moveTo(90,120);  // x1, y1 梯形左上角
+    ct.lineTo(240,120); // x2, y1 梯形右上角
+    ct.lineTo(300,450); // x3, y2 梯形右下角
+    ct.lineTo(30,450);  // x4=x1-(x3-x2), y2 梯形左下角
+    ct.lineTo(90,120);
+    ct.closePath();
+    ct.stroke();
+    }
+
+function test1rev() {  // 类似负片效果
+    let can1 = document.getElementById("canvas1");
+    var ct=can1.getContext("2d");
+    var im=ct.getImageData(0,0, can1.width,can1.height);
+    for (var i=0;i<im.data.length/4;i++)
+    {
+        im.data[4*i]=255-im.data[4*i];
+        im.data[4*i+1]=255-im.data[4*i+1];
+        im.data[4*i+2]=255-im.data[4*i+2];
+        //im.data[4*i+3] alpha
+    }
+    // 把结果呈现在新的画布上
+    let can2 = document.getElementById("canvas2");
+    var ct2=can2.getContext("2d");
+    ct2.putImageData(im,0,0)
+}
+function test2grey() {
+    let can1 = document.getElementById("canvas1");
+    var ct=can1.getContext("2d");
+    var wid=can1.width;
+    var im=ct.getImageData(0,0, wid, can1.height);
+    document.getElementsByTagName('p1')[0].innerHTML = can1.height + 'x' + wid+',' + im.data.length;
+    for (var y=0; y<can1.height; y++)
+    {
+        for (var x=0; x<wid; x++)
+        {
+            var grey = im.data[(y*wid+x)*4]*0.3 +
+                       im.data[(y*wid+x)*4+1]*0.59 +
+                       im.data[(y*wid+x)*4+2]*0.11;
+            im.data[(y*wid+x)*4+0] = grey;
+            im.data[(y*wid+x)*4+1] = grey;
+            im.data[(y*wid+x)*4+2] = grey;
+        }      
+    }
+
+    let can2 = document.getElementById("canvas2");
+    var ct2=can2.getContext("2d");
+    ct2.putImageData(im, 0,0)
+}
+
+function affine(x1, x2, x3, y1, y2) {
+    let can1 = document.getElementById("canvas1");
+    var ct=can1.getContext("2d");
+    var wid=can1.width;
+    var im=ct.getImageData(0,0, wid,can1.height);
+    var tips = can1.height + 'x' + wid+',' + im.data.length;
+        tips += " "+x1+" "+x2+" "+x3+" "+y1+" "+y2+"<br>";
+
+    let can2 = document.getElementById("canvas2");
+    var ct2=can2.getContext("2d");
+    var im2=ct2.createImageData(wid,can1.height);
+
+    for (var y=0; y<can1.height; y++)
+    //for (var y=0; y<60; y++)
+    {
+        for (var x=0; x<wid; x++)
+        //for (var x=0; x<110; x++)
+        {
+            //pix[(y*wid+x)*4]
+            var txa = x1-(x3-x2)*y/can1.height;
+            var txb = x2+(x1-txa);
+            var tx = parseInt(txa+(txb-txa)*x/wid);
+            var ty = parseInt(y1+(y2-y1)*y/can1.height);
+            var i = (y*wid+x)*4;
+            var j = (ty*wid+tx)*4;
+            im2.data[i+0] = im.data[j+0];  // red
+            im2.data[i+1] = im.data[j+1];  // green
+            im2.data[i+2] = im.data[j+2];  // blue
+            im2.data[i+3] = im.data[j+3];  // alpha
+            //tips += i+"("+y+" "+x+")"+"<--"+j+"("+ty+" "+tx+")<br>";
+        }
+        //tips += "<br><br>";
+    }
+
+    ct2.putImageData(im2,0,0);
+
+    document.getElementsByTagName('p1')[0].innerHTML = tips;
+}
+</script>
+
+    <video id="video1" width="320px" height="480px" autoplay="autoplay"></video>
+    <canvas id="canvas1" width="320px" height="480px"></canvas>
+    <canvas id="canvas2" width="320px" height="480px"></canvas>
+<br>
+    <input type="button" value="开启摄像" onclick="live()" />
+    <button id="snap" onclick="takePhoto()">拍！</button>
+    <button id="def" onclick="tixing()">梯形圈</button>
+    <button id="affi" onclick="affine(90,240,300,120,450)">变变变</button>
+<br>
+pixel：
+    <button id="test1" onclick="test1rev()">T1-reverse</button>
+    <button id="test2" onclick="test2grey()">T2-grey</button>
+<br>
+<br>
+    this: <p1>for debg info</p1>
+</body>
+</html>
+<!--
+https://blog.csdn.net/lishundi/article/details/80604747
+https://w3c.github.io/html-media-capture/
+
+https://davidwalsh.name/demo/camera.php
+https://davidwalsh.name/browser-camera
+-->
