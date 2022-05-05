@@ -1,84 +1,59 @@
 package clqwq.press.picturecorrector;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
-
 import android.annotation.SuppressLint;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.view.View;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.io.File;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity {
 
-    private WebView webView;
-    private Button take;
-    private Button save;
-    static final int REQUEST_TAKE_PHOTO = 1;
-    private String currentPhotoPath;
 
-    @SuppressLint("SetJavaScriptEnabled")
+    private Button take;        // 拍照
+    private Button choose;      // 从相册选择
+
+    private ImageView ivShowPicture;
+    private static final int REQUEST_CHOOSE = 1;    // 相册标识
+    private static final int REQUEST_CAMERA = 2;    // 相机标识
+    private String mFilePath;
+    private String fileName;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // 初始化控件
+        take = (Button) findViewById(R.id.take);
+        choose = (Button) findViewById(R.id.choose);
+        ivShowPicture = (ImageView) findViewById(R.id.ivShowPicture);
 
-        // 初始化webView
-        webView = findViewById(R.id.mainView);
-        webView.getSettings().setJavaScriptEnabled(true);
-        initWebView();
-        webView.loadUrl("file:///android_asset/test.html");
-        webView.loadUrl("javascript:alert(123)");
-        take = findViewById(R.id.take);
-        save = findViewById(R.id.save);
-        System.out.println();
-        take.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                dispatchTakePictureIntent();
-            }
-        });
-        save.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                galleryAddPic();
-            }
-        });
+        // 控件绑定点击事件
+        addListener();
 
     }
 
-
-
-
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        @SuppressLint("SimpleDateFormat") String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
-        currentPhotoPath = image.getAbsolutePath();
-        return image;
-    }
-
-    private void galleryAddPic() {
+    // 获取权限
+    private void getPermission() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -89,93 +64,113 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this,
                     new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
         }
-        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-        File f = new File(currentPhotoPath);
-        Uri contentUri = Uri.fromFile(f);
-        System.out.println(contentUri);
-        System.out.println(contentUri);
-        mediaScanIntent.setData(contentUri);
-        this.sendBroadcast(mediaScanIntent);
     }
 
 
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        // Ensure that there's a camera activity to handle the intent
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                // Error occurred while creating the File
+    // 控件绑定点击事件
+    private void addListener() {
+        // 打开相机
+        take.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+//                openCamera();
+                System.out.println(path);
             }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        BuildConfig.APPLICATION_ID + ".provider", photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+        });
+        // 打开相册
+        choose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                getPermission();
+                //在这里跳转到手机系统相册里面
+                Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(intent, REQUEST_CHOOSE);
             }
+        });
+    }
+
+
+    // 拍照后存储并显示图片
+    private void openCamera() {
+        File fileDir = new File(Environment.getExternalStorageDirectory(), "Pictures");
+        if (!fileDir.exists()) {
+            fileDir.mkdir();
+        }
+        fileName = "IMG_" + System.currentTimeMillis() + ".jpg";
+        mFilePath = fileDir.getAbsolutePath() + "/" + fileName;
+        Uri uri = null;
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.Images.Media.DISPLAY_NAME, fileName);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            contentValues.put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/Pictures");
+        } else {
+            contentValues.put(MediaStore.Images.Media.DATA, mFilePath);
+        }
+        contentValues.put(MediaStore.Images.Media.MIME_TYPE, "image/JPEG");
+        uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);// 启动系统相机
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+        startActivityForResult(intent, REQUEST_CAMERA);
+    }
+
+
+    private void afterCamera() {
+        try {
+            //查询的条件语句
+            String selection = MediaStore.Images.Media.DISPLAY_NAME + "=? ";
+            //查询的sql
+            @SuppressLint("Recycle") Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new String[]{MediaStore.Images.Media._ID}, selection, new String[]{fileName}, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    Uri uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cursor.getLong(0));
+                    InputStream inputStream = getContentResolver().openInputStream(uri);
+                    Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                    ivShowPicture.setImageBitmap(bitmap);// 显示图片
+                    // 打开一个新的处理页面，也就是JS页面
+
+                } while (cursor.moveToNext());
+            } else {
+                Toast.makeText(this, "no photo", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+String path;
+    private void afterChoose(Intent data) {
+        try {
+            Uri selectedImage = data.getData(); //获取系统返回的照片的Uri
+            String[] filePathColumn = {MediaStore.Images.Media.DATA};
+            Cursor cursor = getContentResolver().query(selectedImage,
+                    filePathColumn, null, null, null);//从系统表中查询指定Uri对应的照片
+            cursor.moveToFirst();
+            int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+            path = cursor.getString(columnIndex);  //获取照片路径
+            cursor.close();
+            Bitmap bitmap = BitmapFactory.decodeFile(path);
+            ivShowPicture.setImageBitmap(bitmap);
+            // 界面跳转
+
+        } catch (Exception e) {
+            // TODO Auto-generatedcatch block
+            e.printStackTrace();
         }
     }
 
-
-
-
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private void initWebView() {
-
-        WebSettings settings = webView.getSettings();
-        //设置webview支持javascript
-        settings.setJavaScriptEnabled(true);
-        //增加 设置脚本是否允许自动打开弹窗
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        //支持自动加载图片
-        settings.setLoadsImagesAutomatically(true);
-        //设置webview推荐使用的窗口，使html界面自适应屏幕
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
-        //设置webview保存表单数据
-        settings.setSaveFormData(true);
-        //设置webview保存密码
-        settings.setSavePassword(true);
-
-
-        int mDensity = getResources().getDisplayMetrics().densityDpi;
-        if (mDensity == 120) {
-            settings.setDefaultZoom(WebSettings.ZoomDensity.CLOSE);
-        } else if (mDensity == 160) {
-            settings.setDefaultZoom(WebSettings.ZoomDensity.MEDIUM);
-        } else if (mDensity == 240) {
-            settings.setDefaultZoom(WebSettings.ZoomDensity.FAR);
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) { // 如果返回数据
+            // 如果是从相机中回退的
+            if (requestCode == REQUEST_CAMERA) {
+                afterCamera();
+            } else if (requestCode == REQUEST_CHOOSE) {
+                afterChoose(data);
+            }
+            Intent intent = new Intent(getApplicationContext(), CorrectActivity.class);
+            startActivity(intent);
         }
-        //支持缩放
-        settings.setSupportZoom(true);
-        settings.setSupportMultipleWindows(true);
-        //设置APP可以缓存
-        settings.setAppCacheEnabled(true);
-        settings.setDatabaseEnabled(true);
-        //返回上个界面不刷新  允许本地缓存
-        settings.setDomStorageEnabled(true);
-        //增加 设置缓存LOAD_DEFAULT   LOAD_CACHE_ONLY,LOAD_NO_CACHE
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        // 设置可以访问文件
-        settings.setAllowFileAccess(true);
-        //不支持放大缩小
-        settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
-        //不支持放大缩小
-        settings.setDisplayZoomControls(false);
-
-        //增加 设置编码格式
-        settings.setDefaultTextEncodingName("utf-8");
-
-        webView.setLongClickable(true);
-        webView.setScrollbarFadingEnabled(true);
-        webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
-        webView.setDrawingCacheEnabled(true);
     }
-
 
 }
+
