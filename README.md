@@ -1,3 +1,4 @@
+# Thanks <a href = "https://github.com/wzhqwq">@</a>
 # PictureCorrector
 
 ## 1. 原理
