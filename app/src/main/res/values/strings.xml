@@ -1,7 +1,4 @@
 <resources>
     <string name="app_name">PictureCorrector</string>
-    <string name="take">拍照</string>
-    <string name="choose">相册</string>
-    <string name="check">剪裁</string>
-    <string name="save">保存</string>
+    <string name="savaAs">保存</string>
 </resources>

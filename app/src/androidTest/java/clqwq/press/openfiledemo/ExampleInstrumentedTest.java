@@ -1,4 +1,4 @@
-package clqwq.press.picturecorrector;
+package clqwq.press.openfiledemo;
 
 import android.content.Context;
 
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("clqwq.press.picturecorrector", appContext.getPackageName());
+        assertEquals("clqwq.press.openfiledemo", appContext.getPackageName());
     }
 }

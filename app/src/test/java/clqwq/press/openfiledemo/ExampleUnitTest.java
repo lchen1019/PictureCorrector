@@ -1,4 +1,4 @@
-package clqwq.press.picturecorrector;
+package clqwq.press.openfiledemo;
 
 import org.junit.Test;
 
